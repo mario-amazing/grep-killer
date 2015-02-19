@@ -24,21 +24,21 @@ end
 def parse_argv(args)
   options = {}
   options[:context] = 0
-  options[:patern] = args[0]
+  options[:patern] = args.first
   options[:fnames] = []
   options[:fnames] << args[1]
   OptionParser.new do |opts|
     opts.banner = "Usage: search string + function + [option]"
-    # opts.on("-A NLINES","puts string with context") do |amount|
+    # opts.on("-A NLINES", "puts string with context") do |amount|
       # options[:context] = amount
     # end
-    opts.on("-f","-files fn1,fn2,fn3","In what files need search") do |files|
-      options[:fnames] = files.split(",")
+    opts.on("-f", "-files fn1,fn2,fn3", Array, "In what files need search") do |files|
+      options[:fnames] = files
     end
-    opts.on("-R","Recursion in the current directory") do |_|
+    opts.on("-R", "Recursion in the current directory") do |_|
       options[:fnames] = Dir.glob("*")
     end
-    # opts.on("-z fname","In what zip file need to search") do |zname|
+    # opts.on("-z fname", "In what zip file need to search") do |zname|
     #   Zip::File.open(zname) do |zip_file| ##{Dir.pwd}/#{zname}
     #     Dir.mkdir("")
     #     zip_file.each do |entry|
@@ -47,10 +47,6 @@ def parse_argv(args)
     #     end
       # end
     # end
-    opts.on("-h","--help","Options info") do
-      puts opts
-      exit
-    end
   end.parse!(args)
   options
 end   

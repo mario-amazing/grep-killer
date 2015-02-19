@@ -1,3 +1,4 @@
 source "https://rubygems.org"
 
-# gem "rails"
+ gem "rubyzip","1.1.6"
+ gem "colorize"

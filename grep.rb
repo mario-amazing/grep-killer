@@ -1,17 +1,23 @@
 #!/usr/bin/env ruby
 
 require 'optparse'
-USAGE = "Usage: search string + function + [option]"
+require 'zip'
+require 'colorize'
 
 class Grep 
-  def initialize
-
+  def initialize(options)
+    search(options)
   end
 
   def search(options) 
-    options[:fnames].each do |file|
-    File.open(file).each { |line| puts line if line =~ /#{options[:patern]}/ }  
+    # if options[:zip] == true
+    options[:fnames].each do |fname|
+    File.open(fname).each { |line| puts "#{fname}:",line.colorize(:blue) if line =~ /#{options[:patern]}/ }  
     end
+  end
+
+  def unzip_file
+
   end
 end
 
@@ -19,12 +25,28 @@ def parse_argv(args)
   options = {}
   options[:context] = 0
   options[:patern] = args[0]
-  options[:fnames] = args[1].split(",")
+  options[:fnames] = []
+  options[:fnames] << args[1]
   OptionParser.new do |opts|
-    opts.banner = USAGE
-    opts.on("-A","puts string with context") do
-      options[:context] = 1
+    opts.banner = "Usage: search string + function + [option]"
+    # opts.on("-A NLINES","puts string with context") do |amount|
+      # options[:context] = amount
+    # end
+    opts.on("-f","-files fn1,fn2,fn3","In what files need search") do |files|
+      options[:fnames] = files.split(",")
     end
+    opts.on("-R","Recursion in the current directory") do |_|
+      options[:fnames] = Dir.glob("*")
+    end
+    # opts.on("-z fname","In what zip file need to search") do |zname|
+    #   Zip::File.open(zname) do |zip_file| ##{Dir.pwd}/#{zname}
+    #     Dir.mkdir("")
+    #     zip_file.each do |entry|
+    #     puts "Extracting #{entry.name}"
+    #     entry.extract(dest_file)
+    #     end
+      # end
+    # end
     opts.on("-h","--help","Options info") do
       puts opts
       exit
@@ -33,10 +55,7 @@ def parse_argv(args)
   options
 end   
 
-#file_names = ["grep.rb", "Gemfile"] 
 options = parse_argv(ARGV)
-a = Grep.new
-a.search(options)
-
-#puts ARGV
-#a.search("rails", file_names, "-h")
+a = Grep.new(options)
+# puts ARGV
+# puts options

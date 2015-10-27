@@ -2,80 +2,86 @@
 
 require 'optparse'
 require 'zip'
-require 'colorize'
+require 'pry'
 
-class Grep 
-  def initialize(options)
-    @options = options
+class Args
+  def initialize(args)
+    @args = args
   end
 
-  def search(patern = @options[:patern],fnames =  @options[:fnames])
-    if @options[:zip] != false
-      fnames = unzip_file(@options[:zip])
-      search_in_files(patern, fnames)
-      Dir.delete("./tmp_dir" )
-    else
-      search_in_files(patern, fnames)
-    end
-  end
-
-  def search_in_files(patern, fnames)
-    fnames.each do |fname|
-      content = []
-      lines_array = []
-      File.open(fname).each { |line| content << line}
-      content.each_with_index { |line,index| lines_array << index if line =~ /#{patern}/ }
-      display(fname, content, lines_array)
-    end
-  end
-
-  def unzip_file(zname)
-    Zip::File.open(zname) do |zip_file|
-      Dir.mkdir("tmp_dir") unless Dir.exist?("tmp_dir")          
-      zip_file.each do |files|
-      zip_files.extract(files, "#{Dir.pwd}/tmp_dir") unless File.exist?("#{Dir.pwd}/tmp_dir")
-      @options[:fnames] = Dir.glob("tmp_dir/*")
-      # puts options[:fnames]
+  def parse_argv
+    @conditions = { amount: 0, fnames: [] }
+    OptionParser.new do |opts|
+      opts.banner = 'Usage: [options] + PATTERN + [FILE]'
+      opts.on('-A NLINES', Integer, 'Puts string with amount') do |amount|
+        @conditions[:amount] = amount
       end
-    end
-    @options[:fnames]
-  end
-
-  def display(fname, content, lines_array)
-    arg = @options[:context]
-    puts "#{fname}:".colorize(:green)
-    lines_array.each {|index| puts content[index-arg .. index+arg]} 
-    puts ''
+      opts.on('-f', '-files fn1,fn2,fn3', Array, 'Files for search') do |files|
+        @conditions[:fnames] << files
+      end
+      opts.on('-R', 'Recursion in the current directory') do |_|
+        @conditions[:fnames] << Dir.glob('*')
+      end
+      opts.on('-z znames', Array, 'In what zip file need to search') do |zname|
+        @conditions[:zip] = znames
+      end
+    end.parse!(@args)
+    @conditions[:pattern] = @args.shift
+    @conditions[:fnames] << @args.shift
+    @conditions
   end
 end
 
-def parse_argv(args)
-  options = {}
-  options[:context] = 0
-  options[:zip] = false
-  options[:patern] = args.first
-  options[:fnames] = []
-  options[:fnames] << args[1]
-  OptionParser.new do |opts|
-    opts.banner = "Usage: search string + function + [option]"
-    opts.on("-A NLINES", OptionParser::OctalInteger, "puts string with context") do |amount|
-      options[:context] = amount
-    end
-    opts.on("-f", "-files fn1,fn2,fn3", Array, "In what files need search") do |files|
-      options[:fnames] = files
-    end
-    opts.on("-R", "Recursion in the current directory") do |_|
-      options[:fnames] = Dir.glob("**")
-    end
-    opts.on("-z fname", "In what zip file need to search") do |zname|
-      options[:zip] = zname
-    end
-  end.parse!(args)
-  options
-end   
+class Grep
+  def initialize(conditions)
+    @conditions = conditions
+  end
 
-options = parse_argv(ARGV)
-a = Grep.new(options)
-a.search()
-# puts ARGV
-# puts options
+  def search_pattern
+    unzip_file(@conditions[:zip]) if !@conditions[:zip].nil?
+    amount = @conditions[:amount]
+    find_content = []
+    @conditions[:fnames].each do |fname|
+      file_content = open_file(fname)
+      scope = []
+      file_content.each_with_index do |line, index|
+        if line =~ /#{@conditions[:pattern]}/
+          scope << file_content[index - amount..index + amount].join
+        end
+      end
+      find_content << { fname: fname, content: scope }
+    end
+    find_content
+  end
+
+  def open_file(fname)
+    content = []
+    File.open(fname).each { |line| content << line }
+    content
+  rescue
+    puts "File: #{fname} cant be open."
+  end
+
+  def to_s
+    find_content = ''
+    search_pattern.each do |parse|
+      find_content << parse[:fname] + ":\n"
+      parse[:content].each { |content| find_content << content }
+    end
+    find_content
+  end
+
+  def unzip_file
+    Zip::File.open(@conditions[:zip]) do |zip_file|
+      Dir.mkdir('tmp_dir') unless Dir.exist?('tmp_dir')
+      zip_file.each do |files|
+        zip_files.extract(files, "#{Dir.pwd}/tmp_dir") unless
+        File.exist?('#{Dir.pwd}/tmp_dir')
+        @conditions[:fnames] = Dir.glob('tmp_dir/*')
+      end
+      Dir.delete('./tmp_dir')
+    end
+  end
+end
+
+puts Grep.new(Args.new(ARGV).parse_argv).to_s

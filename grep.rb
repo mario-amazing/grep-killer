@@ -3,6 +3,7 @@
 require 'optparse'
 require 'zip'
 require 'pry'
+require 'colorize'
 
 class Args
   def initialize(args)
@@ -26,9 +27,18 @@ class Args
         @conditions[:zip] = znames
       end
     end.parse!(@args)
+    # binding.pry
     @conditions[:pattern] = @args.shift
-    @conditions[:fnames] << @args.shift
+    @conditions[:fnames] << @args.shift if !@args.first.nil?
+    validate_coditions
     @conditions
+  end
+
+  def validate_coditions
+      binding.pry
+      if @conditions[:pattern].nil? || (@conditions[:fnames].none? && @conditions[:zname].nil?)
+      raise 'Wrong conditions format.'.red
+    end
   end
 end
 
@@ -39,19 +49,27 @@ class Grep
 
   def search_pattern
     unzip_file(@conditions[:zip]) if !@conditions[:zip].nil?
-    amount = @conditions[:amount]
     find_content = []
     @conditions[:fnames].each do |fname|
-      file_content = open_file(fname)
-      scope = []
-      file_content.each_with_index do |line, index|
-        if line =~ /#{@conditions[:pattern]}/
-          scope << file_content[index - amount..index + amount].join
-        end
-      end
-      find_content << { fname: fname, content: scope }
+      content = open_file(fname)
+      scope = verification_pattern(content)
+      # binding.pry
+      find_content << { fname: fname, content: scope } if !scope.empty?
     end
     find_content
+  end
+
+  def verification_pattern(content, pattern = @conditions[:pattern])
+    amount = @conditions[:amount]
+    scope = []
+    if !content.nil?
+      content.each_with_index do |line, index|
+        if line =~ /#{pattern}/
+          scope << (content[index - amount..index + amount].join).green
+        end
+      end
+    end
+    scope
   end
 
   def open_file(fname)
@@ -59,13 +77,13 @@ class Grep
     File.open(fname).each { |line| content << line }
     content
   rescue
-    puts "File: #{fname} cant be open."
+    puts "File: #{fname} cant be open.".red
   end
 
   def to_s
     find_content = ''
     search_pattern.each do |parse|
-      find_content << parse[:fname] + ":\n"
+      find_content << (parse[:fname] + ":\n").blue
       parse[:content].each { |content| find_content << content }
     end
     find_content

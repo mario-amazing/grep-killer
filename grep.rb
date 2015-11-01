@@ -14,6 +14,7 @@ class Args
     @conditions = { amount: 0 }
     OptionParser.new do |opts|
       opts.banner = 'Usage: PATTERN + FILE + [options]'
+      opts.separator '*You can set the PATTERN in RegExp format'
       opts.on('-A NLINES', Integer, 'Amount of context') do |amount|
         @conditions[:amount] = amount
       end
@@ -66,7 +67,7 @@ class Grep
     scope = []
     unless content.nil?
       content.each_with_index do |line, index|
-        if line =~ /#{pattern}/
+        if /#{pattern}/ =~ line
           if (index - amount) < 0
             scope << (content[0..index + amount].join).green
           else
@@ -92,7 +93,7 @@ class Grep
     search_pattern
     find_content = ''
     @find_content.each do |parse|
-      find_content << (parse[:fname] + ":\n").blue
+      find_content << ("\n" + parse[:fname] + ":\n").blue
       parse[:content].each { |content| find_content << content }
     end
     find_content

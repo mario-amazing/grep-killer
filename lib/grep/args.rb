@@ -15,7 +15,7 @@ module Grep
         opts.on('-A NLINES', Integer, 'Amount of context') do |amount|
           @conditions[:amount] = amount
         end
-        opts.on('-f', '-files fn1,fn2,fn3', Array, 'Files for search') do |files|
+        opts.on('-f', '-files fn1,fn2..', Array, 'Files for search') do |files|
           @conditions[:fnames] = files
         end
         opts.on('-R', 'Recursion in the current directory') do |_|

@@ -67,7 +67,11 @@ class Grep
     unless content.nil?
       content.each_with_index do |line, index|
         if line =~ /#{pattern}/
-          scope << (content[index - amount..index + amount].join).green
+          if (index - amount) < 0
+            scope << (content[0..index + amount].join).green
+          else
+            scope << (content[index - amount..index + amount].join).green
+          end
         end
       end
     end
